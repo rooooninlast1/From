@@ -1,130 +1,227 @@
-const config = {
-  totalSlides: 10,
-  lerp: 0.075,
-  scrollSpeed: 3.5,
-  minSize: 0.1,
-  growth: 0.25,
-  aspect: 1 / 1.25,
-  baseline: 0.0,
-};
+const menuItems = [
+  {
+    id: 1,
+    title: "COGNAC COCKTAIL",
+    badge: "ALC 40%",
+    price: "$24",
+    description: "Aged Remy Martin cognac infused with bitter orange peels, dark oak syrup, and artisanal smoke.",
+    img: "./public/slide-img-1.jpg",
+  },
+  {
+    id: 2,
+    title: "PRIME RIBEYE STEAK",
+    badge: "500G DRY-AGED",
+    price: "$78",
+    description: "USDA Prime dry-aged ribeye served with black truffle butter and roasted garlic bone marrow.",
+    img: "./public/slide-img-2.jpg",
+  },
+  {
+    id: 3,
+    title: "HERB ROASTED CHICKEN",
+    badge: "750G ORGANIC",
+    price: "$46",
+    description: "Free-range organic chicken marinated in wild rosemary, lemon thyme, and sea salt crust.",
+    img: "./public/slide-img-3.jpg",
+  },
+  {
+    id: 4,
+    title: "SIGNATURE OLD FASHIONED",
+    badge: "ALC 38%",
+    price: "$22",
+    description: "Single barrel bourbon stirred with Luxardo cherries, Angostura bitters, and gold leaf garnish.",
+    img: "./public/slide-img-4.jpg",
+  },
+  {
+    id: 5,
+    title: "MEDITERRANEAN SEABASS",
+    badge: "WILD CAUGHT",
+    price: "$54",
+    description: "Pan-seared Chilean seabass accompanied by saffron beurre blanc and roasted heirloom tomatoes.",
+    img: "./public/slide-img-5.jpg",
+  },
+  {
+    id: 6,
+    title: "TRUFFLE LOBSTER PASTA",
+    badge: "FRESH HANDMADE",
+    price: "$62",
+    description: "Poached Maine lobster tail tossed with fresh tagliolini and shaved black winter truffles.",
+    img: "./public/slide-img-6.jpg",
+  },
+  {
+    id: 7,
+    title: "SAFFRON PRAWN & RICE",
+    badge: "400G SEAFOOD",
+    price: "$48",
+    description: "Jumbo tiger prawns simmered in Spanish saffron rice, sweet peppers, and smoked paprika.",
+    img: "./public/slide-img-7.jpg",
+  },
+  {
+    id: 8,
+    title: "GLAZED WAGYU TENDERLOIN",
+    badge: "A5 WAGYU 350G",
+    price: "$110",
+    description: "Japanese A5 Wagyu tenderloin finished with a red wine reduction and baby chanterelles.",
+    img: "./public/slide-img-8.jpg",
+  },
+  {
+    id: 9,
+    title: "VINTAGE BORDEAUX WINE",
+    badge: "ALC 14.5%",
+    price: "$140",
+    description: "Grand Cru Classé vintage featuring notes of blackberry, dark cocoa, and refined French oak.",
+    img: "./public/slide-img-9.jpg",
+  },
+  {
+    id: 10,
+    title: "ARTISANAL DESSERT TART",
+    badge: "DARK CHOCOLATE",
+    price: "$18",
+    description: "70% Valrhona dark chocolate ganache, caramelized hazelnuts, and Madagascar vanilla bean cream.",
+    img: "./public/slide-img-10.jpg",
+  },
+];
 
-const slider = document.querySelector(".slider");
+const container = document.getElementById("sliderContainer");
+const track = document.getElementById("sliderTrack");
 
-const growthRatio = Math.exp(config.growth);
-
-const slideCount =
-  Math.ceil(Math.log(1 + (growthRatio - 1) / config.minSize) / config.growth) +
-  4;
-
-const lerp = (start, end, t) => start + (end - start) * t;
-const wrap = (value, max) => ((value % max) + max) % max;
-const edgeX = (position, width) =>
-  (width * config.minSize * (Math.pow(growthRatio, position) - 1)) /
-  (growthRatio - 1);
-
-const slides = [];
-const slideStreamIndex = [];
-
-for (let i = 0; i < slideCount; i++) {
-  const slide = document.createElement("div");
-  slide.className = "slide";
-  slide.appendChild(document.createElement("img"));
-  slider.appendChild(slide);
-
-  slides.push(slide);
-  slideStreamIndex.push(i);
+// We duplicate items enough times to guarantee a seamless infinite scroll loop
+const duplicationFactor = 4;
+const fullList = [];
+for (let i = 0; i < duplicationFactor; i++) {
+  fullList.push(...menuItems);
 }
 
-function setSlideImage(slide, imageNumber) {
-  if (slide.dataset.image === String(imageNumber)) return;
-  slide.dataset.image = imageNumber;
-  slide.querySelector("img").src = `slide-img-${imageNumber}.jpg`;
+function createCardHTML(item) {
+  const card = document.createElement("div");
+  card.className = "card-item";
+  card.innerHTML = `
+    <div class="card-image-wrapper">
+      <img src="${item.img}" alt="${item.title}" class="card-image" loading="lazy" />
+      <span class="card-badge">${item.badge}</span>
+    </div>
+    <div class="card-body">
+      <h3 class="card-title">${item.title}</h3>
+      <p class="card-description">${item.description}</p>
+    </div>
+    <div class="card-footer">
+      <span class="card-price">${item.price}</span>
+      <span class="card-action">Order Now</span>
+    </div>
+  `;
+  return card;
 }
 
-let scroll = 0;
-let scrollTarget = 0;
-
-slider.addEventListener(
-  "wheel",
-  (e) => {
-    e.preventDefault();
-    scrollTarget += (e.deltaY + e.deltaX) * config.scrollSpeed * 0.0014;
-  },
-  { passive: false },
-);
-
-let lastTouchX = null;
-
-slider.addEventListener("touchstart", (e) => {
-  lastTouchX = e.touches[0].clientX;
+fullList.forEach((item) => {
+  track.appendChild(createCardHTML(item));
 });
 
-slider.addEventListener(
-  "touchmove",
-  (e) => {
-    if (lastTouchX === null) return;
-    const x = e.touches[0].clientX;
-    scrollTarget += (lastTouchX - x) * config.scrollSpeed * 0.004;
-    lastTouchX = x;
-  },
-  { passive: true },
-);
+// Marquee scroll physics & state
+let currentX = 0;
+let baseSpeed = 1.2; // pixels per frame continuous auto-scroll
+let speedMultiplier = 1;
+let isHovered = false;
+let isDragging = false;
+let startX = 0;
+let dragStartX = 0;
+let dragDeltaX = 0;
+let animationFrameId = null;
 
-slider.addEventListener("touchend", () => {
-  lastTouchX = null;
+// One set width calculation (10 items)
+function getSingleSetWidth() {
+  const cardElements = track.children;
+  if (cardElements.length < menuItems.length) return 0;
+
+  let setWidth = 0;
+  for (let i = 0; i < menuItems.length; i++) {
+    const rect = cardElements[i].getBoundingClientRect();
+    const style = window.getComputedStyle(cardElements[i]);
+    const marginRight = parseFloat(style.marginRight) || 0;
+    setWidth += rect.width + marginRight;
+  }
+  return setWidth;
+}
+
+let singleSetWidth = getSingleSetWidth();
+window.addEventListener("resize", () => {
+  singleSetWidth = getSingleSetWidth();
 });
 
-let lastPointerX = null;
-
-slider.addEventListener("pointerdown", (e) => {
-  lastPointerX = e.clientX;
-  slider.setPointerCapture(e.pointerId);
+// Hover handlers
+container.addEventListener("mouseenter", () => {
+  isHovered = true;
 });
 
-slider.addEventListener("pointermove", (e) => {
-  if (lastPointerX === null) return;
-  scrollTarget += (lastPointerX - e.clientX) * config.scrollSpeed * -0.005;
-  lastPointerX = e.clientX;
+container.addEventListener("mouseleave", () => {
+  isHovered = false;
+  if (isDragging) {
+    isDragging = false;
+  }
 });
 
-const releasePointer = () => {
-  lastPointerX = null;
-};
+// Drag / Touch Handlers
+function onPointerDown(e) {
+  isDragging = true;
+  startX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+  dragStartX = currentX;
+  dragDeltaX = 0;
+}
 
-slider.addEventListener("pointerup", releasePointer);
-slider.addEventListener("pointercancel", releasePointer);
+function onPointerMove(e) {
+  if (!isDragging) return;
+  const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+  const delta = clientX - startX;
+  dragDeltaX = delta;
+  currentX = dragStartX + delta;
+}
 
-function render() {
-  scroll += (scrollTarget - scroll) * config.lerp;
+function onPointerUp() {
+  if (!isDragging) return;
+  isDragging = false;
+}
 
-  const sliderWidth = slider.clientWidth;
-  const sliderHeight = slider.clientHeight;
-  const baselineOffset = sliderHeight * config.baseline;
+// Mouse events
+container.addEventListener("mousedown", onPointerDown);
+window.addEventListener("mousemove", onPointerMove);
+window.addEventListener("mouseup", onPointerUp);
 
-  for (let i = 0; i < slideCount; i++) {
-    const slide = slides[i];
-    let streamIndex = slideStreamIndex[i];
+// Touch events
+container.addEventListener("touchstart", onPointerDown, { passive: true });
+window.addEventListener("touchmove", onPointerMove, { passive: true });
+window.addEventListener("touchend", onPointerUp);
 
-    while (edgeX(streamIndex + scroll, sliderWidth) > sliderWidth)
-      streamIndex -= slideCount;
-    while (edgeX(streamIndex + scroll + 1, sliderWidth) < 0)
-      streamIndex += slideCount;
-    slideStreamIndex[i] = streamIndex;
-
-    const left = Math.round(edgeX(streamIndex + scroll, sliderWidth));
-    const right = Math.round(edgeX(streamIndex + scroll + 1, sliderWidth));
-    const width = right - left;
-    const height = width / config.aspect;
-
-    setSlideImage(slide, wrap(streamIndex, config.totalSlides) + 1);
-
-    slide.style.width = `${width}px`;
-    slide.style.height = `${height}px`;
-    slide.style.zIndex = Math.round(right);
-    slide.style.transform = `translate(${left}px, ${-baselineOffset}px)`;
+// Animation Loop
+function updateScroll() {
+  if (!singleSetWidth) {
+    singleSetWidth = getSingleSetWidth();
   }
 
-  requestAnimationFrame(render);
+  if (!isDragging) {
+    // Target speed depends on hover
+    const targetSpeed = isHovered ? 0 : baseSpeed;
+    // Smoothly transition speed
+    speedMultiplier += (targetSpeed - speedMultiplier) * 0.08;
+    currentX -= speedMultiplier;
+  }
+
+  // Ensure seamless wrapping
+  if (singleSetWidth > 0) {
+    while (currentX <= -singleSetWidth) {
+      currentX += singleSetWidth;
+      if (isDragging) dragStartX += singleSetWidth;
+    }
+    while (currentX > 0) {
+      currentX -= singleSetWidth;
+      if (isDragging) dragStartX -= singleSetWidth;
+    }
+  }
+
+  track.style.transform = `translate3d(${currentX}px, 0, 0)`;
+  animationFrameId = requestAnimationFrame(updateScroll);
 }
 
-render();
+// Wait for layout/images load for initial width check
+window.addEventListener("DOMContentLoaded", () => {
+  singleSetWidth = getSingleSetWidth();
+});
+
+updateScroll();
